@@ -419,6 +419,7 @@ BootstrapMenu.prototype.destroy = function() {
     this.close();
     clearOpenEventListeners(this);
     clearActionsEventListeners(this);
+    existingInstances.splice( existingInstances.indexOf(this), 1 );
 };
 
 // close all instances of context menus
