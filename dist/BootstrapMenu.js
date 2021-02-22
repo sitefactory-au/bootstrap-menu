@@ -146,7 +146,7 @@
 
 	            // If has subMenuItems, add submenu class
 	            if ( action.subMenuItems !== undefined ) {
-	                html += '<ul class="dropdown-menu">';
+	                html += '<div class="dropdown-menu-container"><ul class="dropdown-menu">';
 
 	                if ( typeof action.subMenuItems === 'object' && action.subMenuItems.length ) {
 	                    _.each(action.subMenuItems, function(subMenuItem) {
@@ -177,7 +177,7 @@
 	                    });
 	                }
 
-	                html += '</ul>';
+	                html += '</ul></div>';
 	            }
 
 	            // End tag

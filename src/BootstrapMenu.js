@@ -92,7 +92,7 @@ function renderMenu(_this) {
 
             // If has subMenuItems, add submenu class
             if ( action.subMenuItems !== undefined ) {
-                html += '<ul class="dropdown-menu">';
+                html += '<div class="dropdown-menu-container"><ul class="dropdown-menu">';
 
                 if ( typeof action.subMenuItems === 'object' && action.subMenuItems.length ) {
                     _.each(action.subMenuItems, function(subMenuItem) {
@@ -123,7 +123,7 @@ function renderMenu(_this) {
                     });
                 }
 
-                html += '</ul>';
+                html += '</ul></div>';
             }
 
             // End tag
