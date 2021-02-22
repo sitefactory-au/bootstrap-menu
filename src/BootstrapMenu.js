@@ -39,10 +39,6 @@ var defaultOptions = {
      * Valid values are 'click', 'right-click', 'hover' */
     menuEvent: 'right-click', // TODO rename to menuAction in next mayor version
 
-    /* group actions to render them next to each other, with a separator
-     * between each group. */
-    actionsGroups: [],
-
     /* message to show when there are no actions to show in a menu
      * (isShown() returned false on all actions) */
     noActionsMessage: 'No available actions',
@@ -61,91 +57,94 @@ var defaultOptions = {
 };
 
 function renderMenu(_this) {
-    var $menu = $('<div class="dropdown bootstrapMenu" style="z-index:10000;position:absolute;" />');
+    var $menu = $('<div class="dropdown bootstrapMenu" style="z-index:10000;position:absolute;" />'),
+        $ul = $('<ul class="dropdown-menu" style="position:static;display:block;font-size:0.9em;" />'),
+        html = '',
+        index = 0;
 
-    var $ul = $('<ul class="dropdown-menu" style="position:static;display:block;font-size:0.9em;" />');
+    _.each(_this.options.actions, function(action) {
 
-    // group all actions following the actionsGroups option, to
-    // add a separator between each of them.
-    var groups = [];
-
-    // default group where all ungrouped actions will go
-    groups[0] = [];
-
-    // add the rest of groups
-    _.each(_this.options.actionsGroups, function(groupArr, ind) {
-        groups[ind+1] = [];
-    });
-
-    // find out if any of the actions has an icon
-    var actionsHaveIcon = false;
-
-    // add each action to the group it belongs to, or the default group
-    _.each(_this.options.actions, function(action, actionId) {
-        var addedToGroup = false;
-
-        _.each(_this.options.actionsGroups, function(groupArr, ind) {
-            if (_.contains(groupArr, actionId)) {
-                groups[ind+1].push(actionId);
-                addedToGroup = true;
+        if (action.header !== undefined) {
+          html = '<li class="nav-header">' + action.header + '</li>';
+        }
+        else if (action.divider !== undefined)
+        {
+            html = '<li class="divider"></li>';
+        }
+        else
+        {
+            // Start tag
+            html = '<li role="menu" data-menu-item="' + index + '"';
+            if ( action.subMenuItems !== undefined ) {
+              html += ' class="dropdown-submenu"';
             }
-        });
+            html += '>';
 
-        if (addedToGroup === false) {
-            groups[0].push(actionId);
+            // Add Link
+            html += '<a href="#" role="menuitem">';
+            // Add Icon
+            html += '<i class="fa"></i> ';
+            // Add Name
+            html += '<span class="actionName"></span></a>';
+
+            _this.flatItemIndex.push(action);
+            index++;
+
+            // If has subMenuItems, add submenu class
+            if ( action.subMenuItems !== undefined ) {
+                html += '<ul class="dropdown-menu">';
+
+                if ( typeof action.subMenuItems === 'object' && action.subMenuItems.length ) {
+                    _.each(action.subMenuItems, function(subMenuItem) {
+                        if (subMenuItem.header !== undefined) {
+                          html = '<li class="nav-header">' + subMenuItem.header + '</li>';
+                        }
+                        else if ( subMenuItem.divider !== undefined )
+                        {
+                            html += '<li class="divider"></li>';
+                        }
+                        else
+                        {
+                            // Start tag
+                            html += '<li role="menu" data-menu-item="' + index + '">';
+                            // Link
+                            html += '<a href="#" role="menuitem">';
+                            // Icon
+                            if (subMenuItem.iconClass !== undefined && typeof subMenuItem.iconClass === 'string' ) {
+                                html += '<i class="fa fa-fw ' + subMenuItem.iconClass + '"></i> ';
+                            }
+                            html += '<span class="actionName"></span></a>';
+                            // end tag
+                            html += '</li>';
+                            subMenuItem.isSubaction = true;
+                            _this.flatItemIndex.push(subMenuItem);
+                            index++;
+                        }
+                    });
+                }
+
+                html += '</ul>';
+            }
+
+            // End tag
+            html += '</li>';
         }
 
-        if (typeof action.iconClass !== 'undefined') {
-            actionsHaveIcon = true;
-        }
+        // Add to list
+        $ul.append(html);
     });
 
-    var isFirstNonEmptyGroup = true;
+    $ul.append(
+        '<li role="menu" class="noActionsMessage hide disabled">' +
+        '<a href="#" role="menuitem">' +
+        '<span>' + _this.options.noActionsMessage + '</span>' +
+        '</a>' +
+        '</li>'
+    );
 
-    _.each(groups, function(actionsIds) {
-        if (actionsIds.length == 0)
-            return;
+    $menu.append($ul);
 
-        if (isFirstNonEmptyGroup === false) {
-            $ul.append('<li class="divider"></li>');
-        }
-        isFirstNonEmptyGroup = false;
-
-        _.each(actionsIds, function(actionId) {
-            var action = _this.options.actions[actionId];
-
-            /* At least an action has an icon. Add the icon of the current action,
-             * or room to align it with the actions which do have one. */
-            if (actionsHaveIcon === true) {
-                $ul.append(
-                    '<li role="presentation" data-action="'+actionId+'">' +
-                    '<a href="#" role="menuitem">' +
-                    '<i class="fa fa-fw fa-lg ' + (action.iconClass || '') + '"></i> ' +
-                    '<span class="actionName"></span>' +
-                    '</a>' +
-                    '</li>'
-                );
-            }
-            // neither of the actions have an icon.
-            else {
-                $ul.append(
-                    '<li role="presentation" data-action="'+actionId+'">' +
-                    '<a href="#" role="menuitem"><span class="actionName"></span></a>' +
-                    '</li>'
-                );
-            }
-        });
-
-        $ul.append(
-            '<li role="presentation" class="noActionsMessage disabled">' +
-            '<a href="#" role="menuitem">' +
-            '<span>' + _this.options.noActionsMessage + '</span>' +
-            '</a>' +
-            '</li>'
-        );
-    });
-
-    return $menu.append($ul);
+    return $menu;
 }
 
 function setupOpenEventListeners(_this) {
@@ -191,7 +190,7 @@ function setupActionsEventListeners(_this) {
         evt.stopPropagation();
 
         var $target = $(evt.target);
-        var $action = $target.closest('[data-action]');
+        var $action = $target.closest('[data-menu-item]');
 
         // check if the clicked element is an action, and its enabled.
         // if not don't do anything
@@ -199,12 +198,14 @@ function setupActionsEventListeners(_this) {
             return;
         }
 
-        var actionId = $action.data('action');
+        var index = $action.data('menu-item');
         var targetData = _this.options.fetchElementData(_this.$openTarget);
 
         /* call the user click handler. It receives the optional user-defined data,
          * or undefined. */
-        _this.options.actions[actionId].onClick(targetData);
+        if (_this.flatItemIndex[index].onClick !== undefined) {
+            _this.flatItemIndex[index].onClick(targetData);
+        }
 
         // close the menu
         _this.close();
@@ -251,6 +252,7 @@ function clearCloseEventListeners(_this) {
 
 var BootstrapMenu = function(selector, options) {
     this.selector = selector;
+    this.flatItemIndex = [];
     this.options = _.extend({}, defaultOptions, options);
 
     // namespaces to use when registering event listeners
@@ -337,6 +339,13 @@ BootstrapMenu.prototype.updatePosition = function() {
     });
 
     this.$menu.position({ my: menuLocation, at: relativeToLocation, of: relativeToElem });
+
+    // set submenus to show left if they will display out of screen bounds to the right
+    this.$menu.find('.dropdown-submenu').removeClass('pull-left');
+    if ( ( this.$menu.position().left + ( this.$menuList.width() * 2 ) ) > $(window).width() )
+    {
+        this.$menu.find('.dropdown-submenu').addClass('pull-left');
+    }
 };
 
 // open the context menu
@@ -352,29 +361,33 @@ BootstrapMenu.prototype.open = function($openTarget, event) {
 
     var targetData = _this.options.fetchElementData(_this.$openTarget);
 
-    var $actions = this.$menu.find('[data-action]'),
+    var $actions = this.$menu.find('[data-menu-item]'),
         $noActionsMsg = this.$menu.find('.noActionsMessage');
 
     // clear previously hidden actions, and hide by default the 'No actions' message
     $actions.show();
-    $noActionsMsg.hide();
 
     var numShown = 0;
 
     /* go through all actions to update the text to show, which ones to show
      * enabled/disabled and which ones to hide. */
-    $actions.each(function() {
+     $actions.each(function(i, action) {
         var $action = $(this);
+        var actionIndex = $action.data('menu-item');
+        var action = _this.flatItemIndex[actionIndex];
+        var baseClasses = $action.attr('class');
+        var customClasses = action.classNames;
 
-        var actionId = $action.data('action');
-        var action = _this.options.actions[actionId];
+        // Merge base and custom classes
+        if (customClasses && _.isFunction(customClasses))
+            customClasses = classes(targetData);
 
-        var classes = action.classNames || null;
+        var outputClasses = classNames(baseClasses,customClasses);
 
-        if (classes && _.isFunction(classes))
-            classes = classes(targetData);
-
-        $action.attr('class', classNames(classes || ''));
+        if ( outputClasses.length )
+        {
+          $action.attr('class', outputClasses);
+        }
 
         if (action.isShown && action.isShown(targetData) === false) {
             $action.hide();
@@ -388,13 +401,72 @@ BootstrapMenu.prototype.open = function($openTarget, event) {
             _.isFunction(action.name) && action.name(targetData) || action.name
         );
 
-        if (action.isEnabled && action.isEnabled(targetData) === false) {
+        // Update Icon dynamically
+        if ( action.iconClass !== undefined )
+        {
+            var iconClass = _.isFunction(action.iconClass) && action.iconClass(targetData) || action.iconClass
+        }
+
+        if ( iconClass !== undefined )
+        {
+            $action.find('.fa').attr('class','fa fa-fw ' + iconClass );
+        };
+
+        // Update subactions dynamically, if provided as a function
+        if (_.isFunction(action.subactions) && action.subactions(targetData)) {
+
+            var subactions = action.subactions(targetData),
+                $ul = $action.find('ul.dropdown-menu'),
+                li = '',
+                $li;
+
+            $ul.empty();
+
+            if ( typeof subactions === 'object' && subactions.length ) {
+                _.each(subactions, function(subaction) {
+
+                    li = '';
+                    if ( subaction.header !== undefined )
+                    {
+                        li += '<li class="dropdown-header">' + subaction.header + '</li>';
+                    }
+                    else if ( subaction.divider !== undefined )
+                    {
+                        li += '<li class="divider"></li>';
+                    }
+                    else
+                    {
+                        // Start tag
+                        li += '<li role="menu">';
+                        // Link
+                        li += '<a href="#" role="action">';
+                        // Icon
+                        if ( subaction.iconClass !== undefined ) {
+                            li += '<i class="fa fa-fw ' + subaction.iconClass + '"></i> ';
+                        }
+                        li += '<span class="actionName">' + subaction.name + '</span></a>';
+                        // end tag
+                        li += '</li>';
+                    }
+
+                    $li = $(li);
+                    if ( subaction.onClick !== undefined )
+                    {
+                      $li.find('a').click(subaction.onClick);
+                    }
+                    $li.appendTo($ul);
+                });
+            }
+        }
+
+        if ( action.isEnabled && action.isEnabled(targetData) === false ) {
             $action.addClass('disabled');
         }
+
     });
 
     if (numShown === 0) {
-        $noActionsMsg.show();
+        $noActionsMsg.removeClass('hide');
     }
 
     // once it is known which actions are or arent being shown

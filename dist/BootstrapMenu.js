@@ -42,15 +42,15 @@
 /************************************************************************/
 /******/ ([
 /* 0 */
-/***/ function(module, exports, __webpack_require__) {
+/***/ (function(module, exports, __webpack_require__) {
 
 	/* webpack entry file to build a standalone browser script. */
 	window.BootstrapMenu = __webpack_require__(1);
 
 
-/***/ },
+/***/ }),
 /* 1 */
-/***/ function(module, exports, __webpack_require__) {
+/***/ (function(module, exports, __webpack_require__) {
 
 	'use strict';
 
@@ -93,10 +93,6 @@
 	     * Valid values are 'click', 'right-click', 'hover' */
 	    menuEvent: 'right-click', // TODO rename to menuAction in next mayor version
 
-	    /* group actions to render them next to each other, with a separator
-	     * between each group. */
-	    actionsGroups: [],
-
 	    /* message to show when there are no actions to show in a menu
 	     * (isShown() returned false on all actions) */
 	    noActionsMessage: 'No available actions',
@@ -115,91 +111,94 @@
 	};
 
 	function renderMenu(_this) {
-	    var $menu = $('<div class="dropdown bootstrapMenu" style="z-index:10000;position:absolute;" />');
+	    var $menu = $('<div class="dropdown bootstrapMenu" style="z-index:10000;position:absolute;" />'),
+	        $ul = $('<ul class="dropdown-menu" style="position:static;display:block;font-size:0.9em;" />'),
+	        html = '',
+	        index = 0;
 
-	    var $ul = $('<ul class="dropdown-menu" style="position:static;display:block;font-size:0.9em;" />');
+	    _.each(_this.options.actions, function(action) {
 
-	    // group all actions following the actionsGroups option, to
-	    // add a separator between each of them.
-	    var groups = [];
-
-	    // default group where all ungrouped actions will go
-	    groups[0] = [];
-
-	    // add the rest of groups
-	    _.each(_this.options.actionsGroups, function(groupArr, ind) {
-	        groups[ind+1] = [];
-	    });
-
-	    // find out if any of the actions has an icon
-	    var actionsHaveIcon = false;
-
-	    // add each action to the group it belongs to, or the default group
-	    _.each(_this.options.actions, function(action, actionId) {
-	        var addedToGroup = false;
-
-	        _.each(_this.options.actionsGroups, function(groupArr, ind) {
-	            if (_.contains(groupArr, actionId)) {
-	                groups[ind+1].push(actionId);
-	                addedToGroup = true;
+	        if (action.header !== undefined) {
+	          html = '<li class="nav-header">' + action.header + '</li>';
+	        }
+	        else if (action.divider !== undefined)
+	        {
+	            html = '<li class="divider"></li>';
+	        }
+	        else
+	        {
+	            // Start tag
+	            html = '<li role="menu" data-menu-item="' + index + '"';
+	            if ( action.subMenuItems !== undefined ) {
+	              html += ' class="dropdown-submenu"';
 	            }
-	        });
+	            html += '>';
 
-	        if (addedToGroup === false) {
-	            groups[0].push(actionId);
+	            // Add Link
+	            html += '<a href="#" role="menuitem">';
+	            // Add Icon
+	            html += '<i class="fa"></i> ';
+	            // Add Name
+	            html += '<span class="actionName"></span></a>';
+
+	            _this.flatItemIndex.push(action);
+	            index++;
+
+	            // If has subMenuItems, add submenu class
+	            if ( action.subMenuItems !== undefined ) {
+	                html += '<ul class="dropdown-menu">';
+
+	                if ( typeof action.subMenuItems === 'object' && action.subMenuItems.length ) {
+	                    _.each(action.subMenuItems, function(subMenuItem) {
+	                        if (subMenuItem.header !== undefined) {
+	                          html = '<li class="nav-header">' + subMenuItem.header + '</li>';
+	                        }
+	                        else if ( subMenuItem.divider !== undefined )
+	                        {
+	                            html += '<li class="divider"></li>';
+	                        }
+	                        else
+	                        {
+	                            // Start tag
+	                            html += '<li role="menu" data-menu-item="' + index + '">';
+	                            // Link
+	                            html += '<a href="#" role="menuitem">';
+	                            // Icon
+	                            if (subMenuItem.iconClass !== undefined && typeof subMenuItem.iconClass === 'string' ) {
+	                                html += '<i class="fa fa-fw ' + subMenuItem.iconClass + '"></i> ';
+	                            }
+	                            html += '<span class="actionName"></span></a>';
+	                            // end tag
+	                            html += '</li>';
+	                            subMenuItem.isSubaction = true;
+	                            _this.flatItemIndex.push(subMenuItem);
+	                            index++;
+	                        }
+	                    });
+	                }
+
+	                html += '</ul>';
+	            }
+
+	            // End tag
+	            html += '</li>';
 	        }
 
-	        if (typeof action.iconClass !== 'undefined') {
-	            actionsHaveIcon = true;
-	        }
+	        // Add to list
+	        $ul.append(html);
 	    });
 
-	    var isFirstNonEmptyGroup = true;
+	    $ul.append(
+	        '<li role="menu" class="noActionsMessage hide disabled">' +
+	        '<a href="#" role="menuitem">' +
+	        '<span>' + _this.options.noActionsMessage + '</span>' +
+	        '</a>' +
+	        '</li>'
+	    );
 
-	    _.each(groups, function(actionsIds) {
-	        if (actionsIds.length == 0)
-	            return;
+	    $menu.append($ul);
 
-	        if (isFirstNonEmptyGroup === false) {
-	            $ul.append('<li class="divider"></li>');
-	        }
-	        isFirstNonEmptyGroup = false;
-
-	        _.each(actionsIds, function(actionId) {
-	            var action = _this.options.actions[actionId];
-
-	            /* At least an action has an icon. Add the icon of the current action,
-	             * or room to align it with the actions which do have one. */
-	            if (actionsHaveIcon === true) {
-	                $ul.append(
-	                    '<li role="presentation" data-action="'+actionId+'">' +
-	                    '<a href="#" role="menuitem">' +
-	                    '<i class="fa fa-fw fa-lg ' + (action.iconClass || '') + '"></i> ' +
-	                    '<span class="actionName"></span>' +
-	                    '</a>' +
-	                    '</li>'
-	                );
-	            }
-	            // neither of the actions have an icon.
-	            else {
-	                $ul.append(
-	                    '<li role="presentation" data-action="'+actionId+'">' +
-	                    '<a href="#" role="menuitem"><span class="actionName"></span></a>' +
-	                    '</li>'
-	                );
-	            }
-	        });
-
-	        $ul.append(
-	            '<li role="presentation" class="noActionsMessage disabled">' +
-	            '<a href="#" role="menuitem">' +
-	            '<span>' + _this.options.noActionsMessage + '</span>' +
-	            '</a>' +
-	            '</li>'
-	        );
-	    });
-
-	    return $menu.append($ul);
+	    return $menu;
 	}
 
 	function setupOpenEventListeners(_this) {
@@ -245,7 +244,7 @@
 	        evt.stopPropagation();
 
 	        var $target = $(evt.target);
-	        var $action = $target.closest('[data-action]');
+	        var $action = $target.closest('[data-menu-item]');
 
 	        // check if the clicked element is an action, and its enabled.
 	        // if not don't do anything
@@ -253,12 +252,14 @@
 	            return;
 	        }
 
-	        var actionId = $action.data('action');
+	        var index = $action.data('menu-item');
 	        var targetData = _this.options.fetchElementData(_this.$openTarget);
 
 	        /* call the user click handler. It receives the optional user-defined data,
 	         * or undefined. */
-	        _this.options.actions[actionId].onClick(targetData);
+	        if (_this.flatItemIndex[index].onClick !== undefined) {
+	            _this.flatItemIndex[index].onClick(targetData);
+	        }
 
 	        // close the menu
 	        _this.close();
@@ -305,6 +306,7 @@
 
 	var BootstrapMenu = function(selector, options) {
 	    this.selector = selector;
+	    this.flatItemIndex = [];
 	    this.options = _.extend({}, defaultOptions, options);
 
 	    // namespaces to use when registering event listeners
@@ -391,6 +393,13 @@
 	    });
 
 	    this.$menu.position({ my: menuLocation, at: relativeToLocation, of: relativeToElem });
+
+	    // set submenus to show left if they will display out of screen bounds to the right
+	    this.$menu.find('.dropdown-submenu').removeClass('pull-left');
+	    if ( ( this.$menu.position().left + ( this.$menuList.width() * 2 ) ) > $(window).width() )
+	    {
+	        this.$menu.find('.dropdown-submenu').addClass('pull-left');
+	    }
 	};
 
 	// open the context menu
@@ -406,29 +415,33 @@
 
 	    var targetData = _this.options.fetchElementData(_this.$openTarget);
 
-	    var $actions = this.$menu.find('[data-action]'),
+	    var $actions = this.$menu.find('[data-menu-item]'),
 	        $noActionsMsg = this.$menu.find('.noActionsMessage');
 
 	    // clear previously hidden actions, and hide by default the 'No actions' message
 	    $actions.show();
-	    $noActionsMsg.hide();
 
 	    var numShown = 0;
 
 	    /* go through all actions to update the text to show, which ones to show
 	     * enabled/disabled and which ones to hide. */
-	    $actions.each(function() {
+	     $actions.each(function(i, action) {
 	        var $action = $(this);
+	        var actionIndex = $action.data('menu-item');
+	        var action = _this.flatItemIndex[actionIndex];
+	        var baseClasses = $action.attr('class');
+	        var customClasses = action.classNames;
 
-	        var actionId = $action.data('action');
-	        var action = _this.options.actions[actionId];
+	        // Merge base and custom classes
+	        if (customClasses && _.isFunction(customClasses))
+	            customClasses = classes(targetData);
 
-	        var classes = action.classNames || null;
+	        var outputClasses = classNames(baseClasses,customClasses);
 
-	        if (classes && _.isFunction(classes))
-	            classes = classes(targetData);
-
-	        $action.attr('class', classNames(classes || ''));
+	        if ( outputClasses.length )
+	        {
+	          $action.attr('class', outputClasses);
+	        }
 
 	        if (action.isShown && action.isShown(targetData) === false) {
 	            $action.hide();
@@ -442,13 +455,72 @@
 	            _.isFunction(action.name) && action.name(targetData) || action.name
 	        );
 
-	        if (action.isEnabled && action.isEnabled(targetData) === false) {
+	        // Update Icon dynamically
+	        if ( action.iconClass !== undefined )
+	        {
+	            var iconClass = _.isFunction(action.iconClass) && action.iconClass(targetData) || action.iconClass
+	        }
+
+	        if ( iconClass !== undefined )
+	        {
+	            $action.find('.fa').attr('class','fa fa-fw ' + iconClass );
+	        };
+
+	        // Update subactions dynamically, if provided as a function
+	        if (_.isFunction(action.subactions) && action.subactions(targetData)) {
+
+	            var subactions = action.subactions(targetData),
+	                $ul = $action.find('ul.dropdown-menu'),
+	                li = '',
+	                $li;
+
+	            $ul.empty();
+
+	            if ( typeof subactions === 'object' && subactions.length ) {
+	                _.each(subactions, function(subaction) {
+
+	                    li = '';
+	                    if ( subaction.header !== undefined )
+	                    {
+	                        li += '<li class="dropdown-header">' + subaction.header + '</li>';
+	                    }
+	                    else if ( subaction.divider !== undefined )
+	                    {
+	                        li += '<li class="divider"></li>';
+	                    }
+	                    else
+	                    {
+	                        // Start tag
+	                        li += '<li role="menu">';
+	                        // Link
+	                        li += '<a href="#" role="action">';
+	                        // Icon
+	                        if ( subaction.iconClass !== undefined ) {
+	                            li += '<i class="fa fa-fw ' + subaction.iconClass + '"></i> ';
+	                        }
+	                        li += '<span class="actionName">' + subaction.name + '</span></a>';
+	                        // end tag
+	                        li += '</li>';
+	                    }
+
+	                    $li = $(li);
+	                    if ( subaction.onClick !== undefined )
+	                    {
+	                      $li.find('a').click(subaction.onClick);
+	                    }
+	                    $li.appendTo($ul);
+	                });
+	            }
+	        }
+
+	        if ( action.isEnabled && action.isEnabled(targetData) === false ) {
 	            $action.addClass('disabled');
 	        }
+
 	    });
 
 	    if (numShown === 0) {
-	        $noActionsMsg.show();
+	        $noActionsMsg.removeClass('hide');
 	    }
 
 	    // once it is known which actions are or arent being shown
@@ -473,6 +545,7 @@
 	    this.close();
 	    clearOpenEventListeners(this);
 	    clearActionsEventListeners(this);
+	    existingInstances.splice( existingInstances.indexOf(this), 1 );
 	};
 
 	// close all instances of context menus
@@ -485,12 +558,12 @@
 	module.exports = BootstrapMenu;
 
 
-/***/ },
+/***/ }),
 /* 2 */
-/***/ function(module, exports, __webpack_require__) {
+/***/ (function(module, exports, __webpack_require__) {
 
 	var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*!
-	  Copyright (c) 2016 Jed Watson.
+	  Copyright (c) 2017 Jed Watson.
 	  Licensed under the MIT License (MIT), see
 	  http://jedwatson.github.io/classnames
 	*/
@@ -512,8 +585,11 @@
 
 				if (argType === 'string' || argType === 'number') {
 					classes.push(arg);
-				} else if (Array.isArray(arg)) {
-					classes.push(classNames.apply(null, arg));
+				} else if (Array.isArray(arg) && arg.length) {
+					var inner = classNames.apply(null, arg);
+					if (inner) {
+						classes.push(inner);
+					}
 				} else if (argType === 'object') {
 					for (var key in arg) {
 						if (hasOwn.call(arg, key) && arg[key]) {
@@ -527,6 +603,7 @@
 		}
 
 		if (typeof module !== 'undefined' && module.exports) {
+			classNames.default = classNames;
 			module.exports = classNames;
 		} else if (true) {
 			// register as 'classnames', consistent with npm package name
@@ -539,18 +616,18 @@
 	}());
 
 
-/***/ },
+/***/ }),
 /* 3 */
-/***/ function(module, exports) {
+/***/ (function(module, exports) {
 
 	module.exports = jQuery;
 
-/***/ },
+/***/ }),
 /* 4 */
-/***/ function(module, exports, __webpack_require__) {
+/***/ (function(module, exports, __webpack_require__) {
 
 	var __WEBPACK_AMD_DEFINE_FACTORY__, __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*!
-	 * jQuery UI Position 1.12.0
+	 * jQuery UI Position 1.12.1
 	 * http://jqueryui.com
 	 *
 	 * Copyright jQuery Foundation and other contributors
@@ -578,36 +655,15 @@
 		}
 	}( function( $ ) {
 	( function() {
-	var cachedScrollbarWidth, supportsOffsetFractions,
+	var cachedScrollbarWidth,
 		max = Math.max,
 		abs = Math.abs,
-		round = Math.round,
 		rhorizontal = /left|center|right/,
 		rvertical = /top|center|bottom/,
 		roffset = /[\+\-]\d+(\.[\d]+)?%?/,
 		rposition = /^\w+/,
 		rpercent = /%$/,
 		_position = $.fn.position;
-
-	// Support: IE <=9 only
-	supportsOffsetFractions = function() {
-		var element = $( "<div>" )
-				.css( "position", "absolute" )
-				.appendTo( "body" )
-				.offset( {
-					top: 1.5,
-					left: 1.5
-				} ),
-			support = element.offset().top === 1.5;
-
-		element.remove();
-
-		supportsOffsetFractions = function() {
-			return support;
-		};
-
-		return support;
-	};
 
 	function getOffsets( offsets, width, height ) {
 		return [
@@ -816,12 +872,6 @@
 
 			position.left += myOffset[ 0 ];
 			position.top += myOffset[ 1 ];
-
-			// If the browser doesn't support fractions, then round for consistent results
-			if ( !supportsOffsetFractions() ) {
-				position.left = round( position.left );
-				position.top = round( position.top );
-			}
 
 			collisionPosition = {
 				marginLeft: marginLeft,
@@ -1076,9 +1126,9 @@
 	} ) );
 
 
-/***/ },
+/***/ }),
 /* 5 */
-/***/ function(module, exports, __webpack_require__) {
+/***/ (function(module, exports, __webpack_require__) {
 
 	var __WEBPACK_AMD_DEFINE_FACTORY__, __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;( function( factory ) {
 		if ( true ) {
@@ -1094,14 +1144,14 @@
 
 	$.ui = $.ui || {};
 
-	return $.ui.version = "1.12.0";
+	return $.ui.version = "1.12.1";
 
 	} ) );
 
 
-/***/ },
+/***/ }),
 /* 6 */
-/***/ function(module, exports) {
+/***/ (function(module, exports) {
 
 	/**
 	 * A no-operation function that returns `undefined` regardless of the
@@ -1124,16 +1174,16 @@
 	module.exports = noop;
 
 
-/***/ },
+/***/ }),
 /* 7 */
-/***/ function(module, exports, __webpack_require__) {
+/***/ (function(module, exports, __webpack_require__) {
 
 	module.exports = __webpack_require__(8);
 
 
-/***/ },
+/***/ }),
 /* 8 */
-/***/ function(module, exports, __webpack_require__) {
+/***/ (function(module, exports, __webpack_require__) {
 
 	var arrayEach = __webpack_require__(9),
 	    baseEach = __webpack_require__(10),
@@ -1174,9 +1224,9 @@
 	module.exports = forEach;
 
 
-/***/ },
+/***/ }),
 /* 9 */
-/***/ function(module, exports) {
+/***/ (function(module, exports) {
 
 	/**
 	 * A specialized version of `_.forEach` for arrays without support for callback
@@ -1202,9 +1252,9 @@
 	module.exports = arrayEach;
 
 
-/***/ },
+/***/ }),
 /* 10 */
-/***/ function(module, exports, __webpack_require__) {
+/***/ (function(module, exports, __webpack_require__) {
 
 	var baseForOwn = __webpack_require__(11),
 	    createBaseEach = __webpack_require__(30);
@@ -1223,9 +1273,9 @@
 	module.exports = baseEach;
 
 
-/***/ },
+/***/ }),
 /* 11 */
-/***/ function(module, exports, __webpack_require__) {
+/***/ (function(module, exports, __webpack_require__) {
 
 	var baseFor = __webpack_require__(12),
 	    keys = __webpack_require__(16);
@@ -1246,9 +1296,9 @@
 	module.exports = baseForOwn;
 
 
-/***/ },
+/***/ }),
 /* 12 */
-/***/ function(module, exports, __webpack_require__) {
+/***/ (function(module, exports, __webpack_require__) {
 
 	var createBaseFor = __webpack_require__(13);
 
@@ -1269,9 +1319,9 @@
 	module.exports = baseFor;
 
 
-/***/ },
+/***/ }),
 /* 13 */
-/***/ function(module, exports, __webpack_require__) {
+/***/ (function(module, exports, __webpack_require__) {
 
 	var toObject = __webpack_require__(14);
 
@@ -1302,9 +1352,9 @@
 	module.exports = createBaseFor;
 
 
-/***/ },
+/***/ }),
 /* 14 */
-/***/ function(module, exports, __webpack_require__) {
+/***/ (function(module, exports, __webpack_require__) {
 
 	var isObject = __webpack_require__(15);
 
@@ -1322,9 +1372,9 @@
 	module.exports = toObject;
 
 
-/***/ },
+/***/ }),
 /* 15 */
-/***/ function(module, exports) {
+/***/ (function(module, exports) {
 
 	/**
 	 * Checks if `value` is the [language type](https://es5.github.io/#x8) of `Object`.
@@ -1356,9 +1406,9 @@
 	module.exports = isObject;
 
 
-/***/ },
+/***/ }),
 /* 16 */
-/***/ function(module, exports, __webpack_require__) {
+/***/ (function(module, exports, __webpack_require__) {
 
 	var getNative = __webpack_require__(17),
 	    isArrayLike = __webpack_require__(21),
@@ -1407,9 +1457,9 @@
 	module.exports = keys;
 
 
-/***/ },
+/***/ }),
 /* 17 */
-/***/ function(module, exports, __webpack_require__) {
+/***/ (function(module, exports, __webpack_require__) {
 
 	var isNative = __webpack_require__(18);
 
@@ -1429,9 +1479,9 @@
 	module.exports = getNative;
 
 
-/***/ },
+/***/ }),
 /* 18 */
-/***/ function(module, exports, __webpack_require__) {
+/***/ (function(module, exports, __webpack_require__) {
 
 	var isFunction = __webpack_require__(19),
 	    isObjectLike = __webpack_require__(20);
@@ -1483,9 +1533,9 @@
 	module.exports = isNative;
 
 
-/***/ },
+/***/ }),
 /* 19 */
-/***/ function(module, exports, __webpack_require__) {
+/***/ (function(module, exports, __webpack_require__) {
 
 	var isObject = __webpack_require__(15);
 
@@ -1527,9 +1577,9 @@
 	module.exports = isFunction;
 
 
-/***/ },
+/***/ }),
 /* 20 */
-/***/ function(module, exports) {
+/***/ (function(module, exports) {
 
 	/**
 	 * Checks if `value` is object-like.
@@ -1545,9 +1595,9 @@
 	module.exports = isObjectLike;
 
 
-/***/ },
+/***/ }),
 /* 21 */
-/***/ function(module, exports, __webpack_require__) {
+/***/ (function(module, exports, __webpack_require__) {
 
 	var getLength = __webpack_require__(22),
 	    isLength = __webpack_require__(24);
@@ -1566,9 +1616,9 @@
 	module.exports = isArrayLike;
 
 
-/***/ },
+/***/ }),
 /* 22 */
-/***/ function(module, exports, __webpack_require__) {
+/***/ (function(module, exports, __webpack_require__) {
 
 	var baseProperty = __webpack_require__(23);
 
@@ -1587,9 +1637,9 @@
 	module.exports = getLength;
 
 
-/***/ },
+/***/ }),
 /* 23 */
-/***/ function(module, exports) {
+/***/ (function(module, exports) {
 
 	/**
 	 * The base implementation of `_.property` without support for deep paths.
@@ -1607,9 +1657,9 @@
 	module.exports = baseProperty;
 
 
-/***/ },
+/***/ }),
 /* 24 */
-/***/ function(module, exports) {
+/***/ (function(module, exports) {
 
 	/**
 	 * Used as the [maximum length](http://ecma-international.org/ecma-262/6.0/#sec-number.max_safe_integer)
@@ -1633,9 +1683,9 @@
 	module.exports = isLength;
 
 
-/***/ },
+/***/ }),
 /* 25 */
-/***/ function(module, exports, __webpack_require__) {
+/***/ (function(module, exports, __webpack_require__) {
 
 	var isArguments = __webpack_require__(26),
 	    isArray = __webpack_require__(27),
@@ -1680,9 +1730,9 @@
 	module.exports = shimKeys;
 
 
-/***/ },
+/***/ }),
 /* 26 */
-/***/ function(module, exports, __webpack_require__) {
+/***/ (function(module, exports, __webpack_require__) {
 
 	var isArrayLike = __webpack_require__(21),
 	    isObjectLike = __webpack_require__(20);
@@ -1720,9 +1770,9 @@
 	module.exports = isArguments;
 
 
-/***/ },
+/***/ }),
 /* 27 */
-/***/ function(module, exports, __webpack_require__) {
+/***/ (function(module, exports, __webpack_require__) {
 
 	var getNative = __webpack_require__(17),
 	    isLength = __webpack_require__(24),
@@ -1766,9 +1816,9 @@
 	module.exports = isArray;
 
 
-/***/ },
+/***/ }),
 /* 28 */
-/***/ function(module, exports) {
+/***/ (function(module, exports) {
 
 	/** Used to detect unsigned integer values. */
 	var reIsUint = /^\d+$/;
@@ -1796,9 +1846,9 @@
 	module.exports = isIndex;
 
 
-/***/ },
+/***/ }),
 /* 29 */
-/***/ function(module, exports, __webpack_require__) {
+/***/ (function(module, exports, __webpack_require__) {
 
 	var isArguments = __webpack_require__(26),
 	    isArray = __webpack_require__(27),
@@ -1866,9 +1916,9 @@
 	module.exports = keysIn;
 
 
-/***/ },
+/***/ }),
 /* 30 */
-/***/ function(module, exports, __webpack_require__) {
+/***/ (function(module, exports, __webpack_require__) {
 
 	var getLength = __webpack_require__(22),
 	    isLength = __webpack_require__(24),
@@ -1903,9 +1953,9 @@
 	module.exports = createBaseEach;
 
 
-/***/ },
+/***/ }),
 /* 31 */
-/***/ function(module, exports, __webpack_require__) {
+/***/ (function(module, exports, __webpack_require__) {
 
 	var bindCallback = __webpack_require__(32),
 	    isArray = __webpack_require__(27);
@@ -1929,9 +1979,9 @@
 	module.exports = createForEach;
 
 
-/***/ },
+/***/ }),
 /* 32 */
-/***/ function(module, exports, __webpack_require__) {
+/***/ (function(module, exports, __webpack_require__) {
 
 	var identity = __webpack_require__(33);
 
@@ -1974,9 +2024,9 @@
 	module.exports = bindCallback;
 
 
-/***/ },
+/***/ }),
 /* 33 */
-/***/ function(module, exports) {
+/***/ (function(module, exports) {
 
 	/**
 	 * This method returns the first argument provided to it.
@@ -2000,16 +2050,16 @@
 	module.exports = identity;
 
 
-/***/ },
+/***/ }),
 /* 34 */
-/***/ function(module, exports, __webpack_require__) {
+/***/ (function(module, exports, __webpack_require__) {
 
 	module.exports = __webpack_require__(35);
 
 
-/***/ },
+/***/ }),
 /* 35 */
-/***/ function(module, exports, __webpack_require__) {
+/***/ (function(module, exports, __webpack_require__) {
 
 	var baseIndexOf = __webpack_require__(36),
 	    getLength = __webpack_require__(22),
@@ -2070,9 +2120,9 @@
 	module.exports = includes;
 
 
-/***/ },
+/***/ }),
 /* 36 */
-/***/ function(module, exports, __webpack_require__) {
+/***/ (function(module, exports, __webpack_require__) {
 
 	var indexOfNaN = __webpack_require__(37);
 
@@ -2103,9 +2153,9 @@
 	module.exports = baseIndexOf;
 
 
-/***/ },
+/***/ }),
 /* 37 */
-/***/ function(module, exports) {
+/***/ (function(module, exports) {
 
 	/**
 	 * Gets the index at which the first occurrence of `NaN` is found in `array`.
@@ -2132,9 +2182,9 @@
 	module.exports = indexOfNaN;
 
 
-/***/ },
+/***/ }),
 /* 38 */
-/***/ function(module, exports, __webpack_require__) {
+/***/ (function(module, exports, __webpack_require__) {
 
 	var isArrayLike = __webpack_require__(21),
 	    isIndex = __webpack_require__(28),
@@ -2166,9 +2216,9 @@
 	module.exports = isIterateeCall;
 
 
-/***/ },
+/***/ }),
 /* 39 */
-/***/ function(module, exports, __webpack_require__) {
+/***/ (function(module, exports, __webpack_require__) {
 
 	var isObjectLike = __webpack_require__(20);
 
@@ -2207,9 +2257,9 @@
 	module.exports = isString;
 
 
-/***/ },
+/***/ }),
 /* 40 */
-/***/ function(module, exports, __webpack_require__) {
+/***/ (function(module, exports, __webpack_require__) {
 
 	var baseValues = __webpack_require__(41),
 	    keys = __webpack_require__(16);
@@ -2246,9 +2296,9 @@
 	module.exports = values;
 
 
-/***/ },
+/***/ }),
 /* 41 */
-/***/ function(module, exports) {
+/***/ (function(module, exports) {
 
 	/**
 	 * The base implementation of `_.values` and `_.valuesIn` which creates an
@@ -2274,16 +2324,16 @@
 	module.exports = baseValues;
 
 
-/***/ },
+/***/ }),
 /* 42 */
-/***/ function(module, exports, __webpack_require__) {
+/***/ (function(module, exports, __webpack_require__) {
 
 	module.exports = __webpack_require__(43);
 
 
-/***/ },
+/***/ }),
 /* 43 */
-/***/ function(module, exports, __webpack_require__) {
+/***/ (function(module, exports, __webpack_require__) {
 
 	var assignWith = __webpack_require__(44),
 	    baseAssign = __webpack_require__(45),
@@ -2330,9 +2380,9 @@
 	module.exports = assign;
 
 
-/***/ },
+/***/ }),
 /* 44 */
-/***/ function(module, exports, __webpack_require__) {
+/***/ (function(module, exports, __webpack_require__) {
 
 	var keys = __webpack_require__(16);
 
@@ -2368,9 +2418,9 @@
 	module.exports = assignWith;
 
 
-/***/ },
+/***/ }),
 /* 45 */
-/***/ function(module, exports, __webpack_require__) {
+/***/ (function(module, exports, __webpack_require__) {
 
 	var baseCopy = __webpack_require__(46),
 	    keys = __webpack_require__(16);
@@ -2393,9 +2443,9 @@
 	module.exports = baseAssign;
 
 
-/***/ },
+/***/ }),
 /* 46 */
-/***/ function(module, exports) {
+/***/ (function(module, exports) {
 
 	/**
 	 * Copies properties of `source` to `object`.
@@ -2422,9 +2472,9 @@
 	module.exports = baseCopy;
 
 
-/***/ },
+/***/ }),
 /* 47 */
-/***/ function(module, exports, __webpack_require__) {
+/***/ (function(module, exports, __webpack_require__) {
 
 	var bindCallback = __webpack_require__(32),
 	    isIterateeCall = __webpack_require__(38),
@@ -2469,9 +2519,9 @@
 	module.exports = createAssigner;
 
 
-/***/ },
+/***/ }),
 /* 48 */
-/***/ function(module, exports) {
+/***/ (function(module, exports) {
 
 	/** Used as the `TypeError` message for "Functions" methods. */
 	var FUNC_ERROR_TEXT = 'Expected a function';
@@ -2533,9 +2583,9 @@
 	module.exports = restParam;
 
 
-/***/ },
+/***/ }),
 /* 49 */
-/***/ function(module, exports, __webpack_require__) {
+/***/ (function(module, exports, __webpack_require__) {
 
 	var baseToString = __webpack_require__(50);
 
@@ -2566,9 +2616,9 @@
 	module.exports = uniqueId;
 
 
-/***/ },
+/***/ }),
 /* 50 */
-/***/ function(module, exports) {
+/***/ (function(module, exports) {
 
 	/**
 	 * Converts `value` to a string if it's not one. An empty string is returned
@@ -2585,5 +2635,5 @@
 	module.exports = baseToString;
 
 
-/***/ }
+/***/ })
 /******/ ]);
