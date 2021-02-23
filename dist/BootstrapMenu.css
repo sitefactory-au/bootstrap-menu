@@ -4,7 +4,6 @@
 
 .dropdown-submenu>div.dropdown-menu-container{
     left:100%;
-	width: 100%;
 	position: absolute;
 	/*top: -26px;*/
 }
@@ -41,7 +40,8 @@
 }
 
 .dropdown-submenu.pull-left>div.dropdown-menu-container{
-    left:-100%;	
+    left:-100%;
+	width: 100%;
 }
 
 .dropdown-submenu.pull-left>div.dropdown-menu-container>.dropdown-menu {
