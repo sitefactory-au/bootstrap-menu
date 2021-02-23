@@ -347,7 +347,7 @@ BootstrapMenu.prototype.updatePosition = function() {
     // set submenus to show left if they will display out of screen bounds to the right
     this.$menu.find('.dropdown-submenu').removeClass('pull-left');
 	var mainMenuWidth = this.$menuList.width();
-	var subMenuWidth = Math.max(...this.$menu.find('.dropdown-submenu>div.dropdown-menu-container>.dropdown-menu').map( function() { return $(this).width()} ));
+	var subMenuWidth = Math.max.apply(null, this.$menu.find('.dropdown-submenu>div.dropdown-menu-container>.dropdown-menu').map( function() { return $(this).width()} ));
     if ( ( this.$menu.position().left + ( mainMenuWidth + subMenuWidth ) ) > $(window).width() )
     {
         this.$menu.find('.dropdown-submenu').addClass('pull-left');

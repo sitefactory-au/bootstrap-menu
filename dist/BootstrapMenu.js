@@ -257,8 +257,12 @@
 
 	        /* call the user click handler. It receives the optional user-defined data,
 	         * or undefined. */
-	        if (_this.flatItemIndex[index].onClick !== undefined) {
-	            _this.flatItemIndex[index].onClick(targetData);
+			var item = _this.flatItemIndex[index];
+			if( item.inactive ){
+				return;
+			}
+	        if (item.onClick !== undefined) {
+	            item.onClick(targetData);
 	        }
 
 	        // close the menu
@@ -396,7 +400,9 @@
 
 	    // set submenus to show left if they will display out of screen bounds to the right
 	    this.$menu.find('.dropdown-submenu').removeClass('pull-left');
-	    if ( ( this.$menu.position().left + ( this.$menuList.width() * 2 ) ) > $(window).width() )
+		var mainMenuWidth = this.$menuList.width();
+		var subMenuWidth = Math.max.apply(null, this.$menu.find('.dropdown-submenu>div.dropdown-menu-container>.dropdown-menu').map( function() { return $(this).width()} ));
+	    if ( ( this.$menu.position().left + ( mainMenuWidth + subMenuWidth ) ) > $(window).width() )
 	    {
 	        this.$menu.find('.dropdown-submenu').addClass('pull-left');
 	    }
